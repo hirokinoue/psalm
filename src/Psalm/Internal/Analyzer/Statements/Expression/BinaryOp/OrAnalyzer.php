@@ -140,14 +140,18 @@ class OrAnalyzer
 
         $left_cond_id = spl_object_id($stmt->left);
 
-        $left_clauses = FormulaGenerator::getFormula(
-            $left_cond_id,
-            $left_cond_id,
-            $stmt->left,
-            $context->self,
-            $statements_analyzer,
-            $codebase
-        );
+        try {
+            $left_clauses = FormulaGenerator::getFormula(
+                $left_cond_id,
+                $left_cond_id,
+                $stmt->left,
+                $context->self,
+                $statements_analyzer,
+                $codebase
+            );
+        } catch (ComplicatedExpressionException $e) {
+            $left_clauses = [];
+        }
 
         try {
             $negated_left_clauses = Algebra::negateFormula($left_clauses);

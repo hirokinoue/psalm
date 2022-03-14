@@ -126,16 +126,20 @@ class IfElseAnalyzer
 
         $cond_object_id = spl_object_id($stmt->cond);
 
-        $if_clauses = FormulaGenerator::getFormula(
-            $cond_object_id,
-            $cond_object_id,
-            $stmt->cond,
-            $context->self,
-            $statements_analyzer,
-            $codebase
-        );
+        try {
+            $if_clauses = FormulaGenerator::getFormula(
+                $cond_object_id,
+                $cond_object_id,
+                $stmt->cond,
+                $context->self,
+                $statements_analyzer,
+                $codebase
+            );
 
-        if (count($if_clauses) > 200) {
+            if (count($if_clauses) > 200) {
+                $if_clauses = [];
+            }
+        } catch (ComplicatedExpressionException $e) {
             $if_clauses = [];
         }
 

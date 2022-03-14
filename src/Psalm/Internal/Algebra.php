@@ -534,8 +534,11 @@ class Algebra
         array $right_clauses,
         int $conditional_object_id
     ): array {
-        if (count($left_clauses) > 60_000 || count($right_clauses) > 60_000) {
-            return [];
+        $left_count = count($left_clauses);
+        $right_count = count($right_clauses);
+
+        if ($left_count * $right_count > 2048) {
+            throw new ComplicatedExpressionException();
         }
 
         $clauses = [];

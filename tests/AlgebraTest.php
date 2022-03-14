@@ -4,6 +4,7 @@ namespace Psalm\Tests;
 
 use PhpParser;
 use Psalm\Context;
+use Psalm\Exception\ComplicatedExpressionException;
 use Psalm\Internal\Algebra;
 use Psalm\Internal\Algebra\FormulaGenerator;
 use Psalm\Internal\Analyzer\FileAnalyzer;
@@ -92,7 +93,7 @@ class AlgebraTest extends TestCase
         $this->assertSame('$a is not int', (string)$negated_formula[0]);
     }
 
-    public function testCombinatorialExpansion(): void
+    public function testTooMuchCombinatorialExpansion(): void
     {
         $dnf = '<?php ($b0 === true && $b4 === true && $b8 === true)
                   || ($b0 === true && $b1 === true && $b2 === true)
@@ -113,6 +114,36 @@ class AlgebraTest extends TestCase
         $file_analyzer->context = new Context();
         $statements_analyzer = new StatementsAnalyzer($file_analyzer, new NodeDataProvider());
 
+        $this->expectException(ComplicatedExpressionException::class);
+
+        FormulaGenerator::getFormula(
+            spl_object_id($dnf_stmt->expr),
+            spl_object_id($dnf_stmt->expr),
+            $dnf_stmt->expr,
+            null,
+            $statements_analyzer
+        );
+    }
+
+    public function testJustEnoughCombinatorialExpansion(): void
+    {
+        $dnf = '<?php ($b0 === true && $b4 === true && $b8 === true)
+                  || ($b0 === true && $b1 === true && $b2 === true)
+                  || ($b0 === true && $b3 === true && $b6 === true)
+                  || ($b1 === true && $b4 === true && $b7 === true)
+                  || ($b2 === true && $b5 === true && $b8 === true)
+                  || ($b2 === true && $b4 === true && $b6 === true);';
+
+        $has_errors = false;
+
+        $dnf_stmt = StatementsProvider::parseStatements($dnf, 7_04_00, $has_errors)[0];
+
+        $this->assertInstanceOf(PhpParser\Node\Stmt\Expression::class, $dnf_stmt);
+
+        $file_analyzer = new FileAnalyzer($this->project_analyzer, 'somefile.php', 'somefile.php');
+        $file_analyzer->context = new Context();
+        $statements_analyzer = new StatementsAnalyzer($file_analyzer, new NodeDataProvider());
+
         $dnf_clauses = FormulaGenerator::getFormula(
             spl_object_id($dnf_stmt->expr),
             spl_object_id($dnf_stmt->expr),
@@ -121,11 +152,11 @@ class AlgebraTest extends TestCase
             $statements_analyzer
         );
 
-        $this->assertCount(6_561, $dnf_clauses);
+        $this->assertCount(729, $dnf_clauses);
 
         $simplified_dnf_clauses = Algebra::simplifyCNF($dnf_clauses);
 
-        $this->assertCount(23, $simplified_dnf_clauses);
+        $this->assertCount(17, $simplified_dnf_clauses);
     }
 
     public function testContainsClause(): void
